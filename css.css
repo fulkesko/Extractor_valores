@@ -1,0 +1,174 @@
+:root {
+    --bg: #0b1220;
+    --panel: #111827;
+    --ink: #E5E7EB;
+    --muted: #9CA3AF;
+    --accent: #60A5FA
+}
+
+html,
+body {
+    height: 100%
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, Segoe UI, Roboto, Helvetica, Arial
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    overflow: hidden
+}
+
+header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid #1f2937
+}
+
+header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700
+}
+
+header small {
+    color: var(--muted)
+}
+
+.seg {
+    display: flex;
+    gap: 6px;
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-radius: 999px;
+    padding: 4px
+}
+
+.seg button {
+    background: transparent;
+    border: 0;
+    color: #cbd5e1;
+    padding: 8px 12px;
+    border-radius: 999px;
+    cursor: pointer
+}
+
+.seg button[aria-pressed="true"] {
+    background: #334155;
+    color: white
+}
+
+.tabs {
+    display: flex;
+    gap: 8px
+}
+
+.tab {
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    color: var(--ink);
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer
+}
+
+.tab[aria-selected="true"] {
+    background: #1f2937;
+    color: #fff;
+    border-color: #374151
+}
+
+section.view {
+    display: none;
+    padding: 20px
+}
+
+section.view.active {
+    display: block
+}
+
+.row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px
+}
+
+input[type="file"],
+select,
+button {
+    background: #0f172a;
+    border: 1px solid #374151;
+    color: #E5E7EB;
+    border-radius: 10px;
+    padding: 10px 12px
+}
+
+button {
+    cursor: pointer
+}
+
+button.primary {
+    background: linear-gradient(135deg, #2563EB, #7C3AED);
+    border: 0
+}
+
+button.ghost {
+    background: transparent;
+    border-color: #374151
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px
+}
+
+th,
+td {
+    border-bottom: 1px solid #1f2937;
+    padding: 10px 8px;
+    text-align: left;
+    vertical-align: top
+}
+
+th {
+    position: sticky;
+    top: 0;
+    background: #0f172a
+}
+
+.muted {
+    color: var(--muted)
+}
+
+.log {
+    max-height: 220px;
+    overflow: auto;
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: ui-monospace, Consolas, Menlo, monospace
+}
