@@ -2,6 +2,11 @@
 const stripAccents = (s = '') => s.normalize('NFD').replace(/\p{Diacritic}+/gu, '');
 const norm = (s = '') => stripAccents(s).replace(/\s+/g, ' ').trim().toLowerCase();
 const RESULT_RE = /resultado\s*final[\s\S]*?(\d{1,3}(?:[.,]\d+)?)\s*%/i;
+const TIME_RE = /\btiempo\b[^\d]*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)/i;
+const extractTime = (text='') => {
+  const m = text.match(TIME_RE);
+  return m ? m[1] : null; 
+};
 
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -266,8 +271,9 @@ const state = {
     debug: false
 };
 
-function getCols() {
-    return COLUMNS[state.current];
+function getCols(){
+  const base = COLUMNS[state.current];
+  return [...base, ...base.map(c => `TIEMPO - ${c}`)];
 }
 
 function getMapper() {
@@ -287,57 +293,70 @@ function log(msg) {
 }
 
 async function processZips(files) {
-    const mapFn = getMapper();
-    for (const file of files) {
-        log(`ZIP: ${file.name}`);
-        const zip = await JSZip.loadAsync(file);
-        const rootCandidates = new Set();
-        zip.forEach((relPath, entry) => {
-            const seg = relPath.split('/')[0];
-            if (seg) rootCandidates.add(seg);
-        });
-        const zipUserDefault = [...rootCandidates][0] || file.name.replace(/\.zip$/i, '');
-        const pdfEntries = Object.values(zip.files).filter(e => !e.dir && /\.pdf$/i.test(e.name));
-        for (const entry of pdfEntries) {
-            const user = (entry.name.split('/')[0] || zipUserDefault) || zipUserDefault;
-            const arrayBuffer = await entry.async('arraybuffer');
-            const text = await pdfToText(arrayBuffer);
+  const mapFn = getMapper();
 
-            const pctMatch = text.match(RESULT_RE);
-            if (!pctMatch) {
-                log(`[${entry.name}] sin 'Resultado Final'`);
-                continue;
-            }
-            const pct = pctMatch[1].replace(',', '.');
+  for (const file of files) {
+    log(`ZIP: ${file.name}`);
+    const zip = await JSZip.loadAsync(file);
 
-            const guess = guessProfile(text);
-            if (guess && guess !== state.current) {
-                log(`[${entry.name}] ⚠ posible tipo ${guess.toUpperCase()} pero el perfil seleccionado es ${state.current.toUpperCase()}`);
-            }
+    const rootCandidates = new Set();
+    zip.forEach((relPath, entry) => {
+      const seg = relPath.split('/')[0];
+      if (seg) rootCandidates.add(seg);
+    });
+    const zipUserDefault = [...rootCandidates][0] || file.name.replace(/\.zip$/i, '');
 
-            const rows = getRows();
-            const existing = rows.get(user) || Object.fromEntries(getCols().map(c => [c, '']));
-            existing.__counters = existing.__counters || {}; // para Manipulador
-            const col = mapFn(text, existing.__counters);
-            if (!col) {
-                log(`[${entry.name}] sin mapeo`);
-                continue;
-            }
-            if (!getCols().includes(col)) {
-                log(`[${entry.name}] columna desconocida: ${col}`);
-                continue;
-            }
-            if (!existing[col]) {
-                existing[col] = pct + '%';
-                rows.set(user, existing);
-                log(`[${entry.name}] -> ${user} | ${col} = ${pct}%`);
-            } else {
-                log(`[${entry.name}] duplicado ignorado para ${user} | ${col}`);
-            }
+    const pdfEntries = Object.values(zip.files).filter(e => !e.dir && /\.pdf$/i.test(e.name));
+    for (const entry of pdfEntries) {
+      const user = (entry.name.split('/')[0] || zipUserDefault) || zipUserDefault;
+      const arrayBuffer = await entry.async('arraybuffer');
+      const text = await pdfToText(arrayBuffer);
+
+      // % Resultado Final
+      const pctMatch = text.match(RESULT_RE);
+      if (!pctMatch) { log(`[${entry.name}] sin 'Resultado Final'`); continue; }
+      const pct = pctMatch[1].replace(',', '.');
+
+      // Aviso si parece otro perfil
+      const guess = guessProfile(text);
+      if (guess && guess !== state.current) {
+        log(`[${entry.name}] ⚠ posible tipo ${guess.toUpperCase()} pero el perfil seleccionado es ${state.current.toUpperCase()}`);
+      }
+
+      const rows = getRows();
+      const existing = rows.get(user) || Object.fromEntries(getCols().map(c => [c, '']));
+      existing.__counters = existing.__counters || {}; // para Manipulador
+
+      // Mapeo a columna base
+      const col = mapFn(text, existing.__counters);
+      if (!col) { log(`[${entry.name}] sin mapeo`); continue; }
+      if (!getCols().includes(col)) { log(`[${entry.name}] columna desconocida: ${col}`); continue; }
+
+      // Tiempo (si existe en el PDF)
+      const timeVal = extractTime(text);
+      const timeCol = `TIEMPO - ${col}`;
+
+      if (!existing[col]) {
+        // Primera aparición de esta columna: guarda % y (si hay) el tiempo
+        existing[col] = pct + '%';
+        if (timeVal) existing[timeCol] = timeVal;
+        rows.set(user, existing);
+        log(`[${entry.name}] -> ${user} | ${col} = ${pct}%` + (timeVal ? ` | tiempo ${timeVal}` : ''));
+      } else {
+        // Duplicado: si ya teníamos el %, pero faltaba el tiempo y ahora lo encontramos, complétalo
+        if (timeVal && !existing[timeCol]) {
+          existing[timeCol] = timeVal;
+          rows.set(user, existing);
+          log(`[${entry.name}] tiempo agregado para ${user} | ${col} = ${timeVal}`);
+        } else {
+          log(`[${entry.name}] duplicado ignorado para ${user} | ${col}`);
         }
+      }
     }
-    renderTable();
+  }
+  renderTable();
 }
+
 
 function renderTable() {
     const wrap = document.getElementById('tableWrap');
