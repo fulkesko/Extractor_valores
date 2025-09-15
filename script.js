@@ -3,9 +3,24 @@ const stripAccents = (s = '') => s.normalize('NFD').replace(/\p{Diacritic}+/gu, 
 const norm = (s = '') => stripAccents(s).replace(/\s+/g, ' ').trim().toLowerCase();
 const RESULT_RE = /resultado\s*final[\s\S]*?(\d{1,3}(?:[.,]\d+)?)\s*%/i;
 const TIME_RE = /\btiempo\b[^\d]*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)/i;
-const extractTime = (text='') => {
+const pad2 = v => String(v).padStart(2, '0');
+const toHMS = (s) => {
+  if (!s) return null;
+  const parts = s.split(':').map(x => x.trim());
+  if (parts.length === 2) {
+    const [mm, ss] = parts;
+    return `00:${pad2(mm)}:${pad2(ss)}`;
+  }
+  if (parts.length === 3) {
+    const [hh, mm, ss] = parts;
+    return `${pad2(hh)}:${pad2(mm)}:${pad2(ss)}`;
+  }
+  return null;
+};
+
+const extractTime = (text = '') => {
   const m = text.match(TIME_RE);
-  return m ? m[1] : null; 
+  return m ? toHMS(m[1]) : null;   
 };
 
 if (window.pdfjsLib) {
